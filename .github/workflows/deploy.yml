@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  deploy-staging:
+  deploy_staging:
     runs-on: ubuntu-latest
     environment: staging
 
@@ -15,14 +15,15 @@ jobs:
       - name: Staging Deployment
         run: |
           echo "Deploying to STAGING"
+          echo "IMAGE=sakila-app:staging"
           docker build -t sakila-app:staging .
           echo "STAGING DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
 
       - name: Notification
         run: echo "Slack notification: staging success"
 
-  deploy-production:
-    needs: deploy-staging
+  deploy_production:
+    needs: deploy_staging
     runs-on: ubuntu-latest
     environment: production
 
@@ -32,6 +33,7 @@ jobs:
       - name: Production Deployment
         run: |
           echo "Deploying to PRODUCTION"
+          echo "IMAGE=sakila-app:production"
           docker build -t sakila-app:production .
 
       - name: Create Release
