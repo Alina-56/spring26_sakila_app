@@ -22,7 +22,6 @@ def dashboard():
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            # Total counts
             cur.execute("SELECT COUNT(*) AS total FROM film")
             total_films = cur.fetchone()["total"]
 
@@ -37,21 +36,16 @@ def dashboard():
             )
             active_rentals = cur.fetchone()["total"]
 
-            # Revenue statistics
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT SUM(amount) AS total_revenue,
                        AVG(amount) AS avg_rental_price,
                        COUNT(*) AS total_transactions
                 FROM payment
                 WHERE payment_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                """
-            )
+                """)
             revenue_stats = cur.fetchone()
 
-            # Recent rentals
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT r.rental_id, f.title, c.first_name, c.last_name, r.rental_date
                 FROM rental r
                 JOIN inventory i ON r.inventory_id = i.inventory_id
@@ -59,13 +53,10 @@ def dashboard():
                 JOIN customer c ON r.customer_id = c.customer_id
                 ORDER BY r.rental_date DESC
                 LIMIT 10
-                """
-            )
+                """)
             recent_rentals = cur.fetchall()
 
-            # Popular films
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT f.title, COUNT(r.rental_id) AS rental_count
                 FROM film f
                 JOIN inventory i ON f.film_id = i.film_id
@@ -73,23 +64,8 @@ def dashboard():
                 GROUP BY f.film_id, f.title
                 ORDER BY rental_count DESC
                 LIMIT 10
-                """
-            )
+                """)
             popular_films = cur.fetchall()
-
-            # Store stats
-            cur.execute(
-                """
-                SELECT s.store_id, a.address, a.district, ci.city, co.country,
-                       (SELECT COUNT(*) FROM customer c WHERE c.store_id = s.store_id) AS customer_count,
-                       (SELECT COUNT(*) FROM inventory i WHERE i.store_id = s.store_id) AS inventory_count
-                FROM store s
-                JOIN address a ON s.address_id = a.address_id
-                JOIN city ci ON a.city_id = ci.city_id
-                JOIN country co ON ci.country_id = co.country_id
-                """
-            )
-            store_stats = cur.fetchall()
 
         conn.close()
 
@@ -102,11 +78,10 @@ def dashboard():
             revenue_stats=revenue_stats,
             recent_rentals=recent_rentals,
             popular_films=popular_films,
-            store_stats=store_stats,
         )
 
     except Exception as e:
-        flash(f"Error loading dashboard: {str(e)}", "error")
+        flash(str(e), "error")
         return render_template(
             "dashboard.html",
             total_films=0,
@@ -120,41 +95,43 @@ def dashboard():
             },
             recent_rentals=[],
             popular_films=[],
-            store_stats=[],
         )
 
 
 @app.route("/api/actor/<int:actor_id>")
-def get_actor_details(actor_id):
+def get_actor(actor_id):
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM actor WHERE actor_id = %s", (actor_id,))
+            cur.execute("SELECT * FROM actor WHERE actor_id=%s", (actor_id,))
             actor = cur.fetchone()
 
             if not actor:
                 return jsonify({"error": "Actor not found"}), 404
 
-            cur.execute(
-                """
-                SELECT f.film_id, f.title, f.release_year, f.rating, c.name AS category
-                FROM film f
-                JOIN film_actor fa ON f.film_id = fa.film_id
-                LEFT JOIN film_category fc ON f.film_id = fc.film_id
-                LEFT JOIN category c ON fc.category_id = c.category_id
-                WHERE fa.actor_id = %s
-                ORDER BY f.title
-                """,
-                (actor_id,),
-            )
-            films = cur.fetchall()
+        conn.close()
+        return jsonify(actor)
+
+    except Exception:
+        return jsonify({"error": "database error"}), 500
+
+
+@app.route("/api/film/<int:film_id>")
+def get_film(film_id):
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM film WHERE film_id=%s", (film_id,))
+            film = cur.fetchone()
+
+            if not film:
+                return jsonify({"error": "Film not found"}), 404
 
         conn.close()
+        return jsonify(film)
 
-        return jsonify({"actor": actor, "films": films})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "database error"}), 500
 
 
 if __name__ == "__main__":
