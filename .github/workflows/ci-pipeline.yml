@@ -3,14 +3,6 @@ name: Deploy Pipeline
 on:
   push:
     branches: [main]
-    paths:
-      - app.py
-      - config.py
-      - templates/**
-      - static/**
-      - Dockerfile
-      - requirements.txt
-      - docker-compose.yml
 
 jobs:
   deploy-staging:
