@@ -1,0 +1,21 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: pip install flake8
+      - name: Run flake8
+        run: flake8 --max-line-length=120 --ignore=E501,W503 .
