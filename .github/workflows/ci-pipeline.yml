@@ -95,7 +95,7 @@ jobs:
         run: |
           docker run -d -p 5000:5000 --name sakila_test ${{ env.IMAGE_NAME }}:${{ github.sha }}
           sleep 10
-          curl -f http://localhost:5000 || true
+          curl -f http://localhost:5000 || echo "App not responding but build passed"
 
   security-scan:
     runs-on: ubuntu-latest
