@@ -18,7 +18,6 @@ jobs:
       - name: Staging Deployment
         run: |
           echo "Deploying to STAGING"
-          echo "IMAGE=sakila-app:staging"
           docker build -t sakila-app:staging .
           echo "STAGING DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
 
@@ -36,14 +35,12 @@ jobs:
       - name: Production Deployment
         run: |
           echo "Deploying to PRODUCTION"
-          echo "IMAGE=sakila-app:production"
           docker build -t sakila-app:production .
 
       - name: Create Release
         run: |
           DATE=$(date +%Y.%m.%d)
           echo "Creating release v$DATE"
-          echo "RELEASE_TAG=v$DATE"
 
       - name: Production Summary
         run: echo "PRODUCTION DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
