@@ -21,16 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install flake8
-        run: pip install flake8
+      - run: pip install flake8
 
-      - name: Run flake8
-        run: flake8 --max-line-length=120 --ignore=E501,W503 .
+      - run: flake8 --max-line-length=120 --ignore=E501,W503 .
 
   test:
     runs-on: ubuntu-latest
@@ -53,22 +50,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-      - name: Install test tools
-        run: pip install pytest pymysql
+      - run: pip install pytest pymysql
 
-      - name: Wait for MySQL
-        run: sleep 25
+      - run: sleep 25
 
-      - name: Run tests
-        env:
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip mysql-client
+          wget https://downloads.mysql.com/docs/sakila-db.zip
+          unzip sakila-db.zip
+          mysql -h 127.0.0.1 -uroot -proot sakila < sakila-db/sakila-schema.sql
+          mysql -h 127.0.0.1 -uroot -proot sakila < sakila-db/sakila-data.sql
+
+      - env:
           MYSQL_HOST: 127.0.0.1
           MYSQL_USER: root
           MYSQL_PASSWORD: root
@@ -82,17 +82,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
-        run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
+      - run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
 
-      - name: Verify image
-        run: docker images
+      - run: docker images
 
-      - name: Run container (smoke test)
-        run: |
+      - run: |
           docker run -d -p 5000:5000 --name sakila_test ${{ env.IMAGE_NAME }}:${{ github.sha }}
           sleep 10
           curl -f http://localhost:5000 || echo "App not responding but build passed"
@@ -104,11 +100,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image for scan
-        run: docker build -t ${{ env.IMAGE_NAME }}:scan .
+      - run: docker build -t ${{ env.IMAGE_NAME }}:scan .
 
-      - name: Run Trivy scan
-        uses: aquasecurity/trivy-action@v0.20.0
+      - uses: aquasecurity/trivy-action@v0.20.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:scan
           format: table
@@ -116,8 +110,7 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-      - name: Upload Trivy report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: .
