@@ -1,19 +1,29 @@
 name: Deploy Pipeline
 
 on:
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
+  push:
+    branches: [main]
+    paths:
+      - app.py
+      - config.py
+      - templates/**
+      - static/**
+      - Dockerfile
+      - requirements.txt
+      - docker-compose.yml
 
 jobs:
   deploy-staging:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: staging
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Show environment variables
+        run: |
+          echo "ENV=staging"
+          echo "IMAGE=sakila-app:staging"
 
       - name: Staging Deployment
         run: |
@@ -35,12 +45,14 @@ jobs:
       - name: Production Deployment
         run: |
           echo "Deploying to PRODUCTION"
+          echo "IMAGE=sakila-app:production"
           docker build -t sakila-app:production .
 
       - name: Create Release
         run: |
           DATE=$(date +%Y.%m.%d)
           echo "Creating release v$DATE"
+          echo "TAG=v$DATE"
 
       - name: Production Summary
         run: echo "PRODUCTION DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
