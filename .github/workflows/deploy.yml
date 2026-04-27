@@ -1,0 +1,54 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app.py
+      - config.py
+      - templates/**
+      - static/**
+      - Dockerfile
+      - requirements.txt
+      - docker-compose.yml
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Staging Deployment
+        run: |
+          echo "Deploying to STAGING"
+          echo "IMAGE=sakila-app:staging"
+          docker build -t sakila-app:staging .
+          echo "STAGING DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notification
+        run: echo "Slack notification: Deployment to staging successful"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Production Deployment
+        run: |
+          echo "Deploying to PRODUCTION"
+          echo "IMAGE=sakila-app:production"
+          docker build -t sakila-app:production .
+
+      - name: Create Release
+        run: |
+          DATE=$(date +%Y.%m.%d)
+          echo "Creating release v$DATE"
+          echo "Production deployed v$DATE"
+
+      - name: Notification
+        run: echo "Slack notification: Production deployment successful"
