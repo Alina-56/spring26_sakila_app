@@ -45,10 +45,18 @@ jobs:
           docker build -t sakila-app:production .
 
       - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      - name: Production Summary
         run: |
-          DATE=$(date +%Y.%m.%d)
-          echo "Creating release v$DATE"
-          echo "Production deployed v$DATE"
+          echo "PRODUCTION DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
 
       - name: Notification
         run: echo "Slack notification: Production deployment successful"
