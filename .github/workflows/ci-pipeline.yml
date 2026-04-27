@@ -1,48 +1,98 @@
-name: Deploy Pipeline
+name: CI Pipeline
 
 on:
   push:
+    branches: [main, develop]
+  pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: 3.9
+  IMAGE_NAME: sakila-app
+  PYTHONPATH: .
+
 jobs:
-  deploy-staging:
+  lint:
     runs-on: ubuntu-latest
-    environment: staging
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Staging Deployment
-        run: |
-          echo "Deploying to STAGING"
-          docker build -t sakila-app:staging .
-          echo "STAGING DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Notification
-        run: echo "Slack notification: Deployment to staging successful"
+      - name: Install flake8
+        run: pip install flake8
 
-  deploy-production:
+      - name: Run lint
+        run: flake8 --max-line-length=120 --ignore=E501,W503 .
+
+  test:
     runs-on: ubuntu-latest
-    needs: deploy-staging
-    environment: production
+    needs: lint
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Production Deployment
-        run: |
-          echo "Deploying to PRODUCTION"
-          docker build -t sakila-app:production .
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Create Release
-        run: |
-          DATE=$(date +%Y.%m.%d)
-          echo "Creating release v$DATE"
-          echo "RELEASE_TAG=v$DATE" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Production Summary
-        run: |
-          echo "PRODUCTION DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
+      - name: Install test tools
+        run: pip install pytest pymysql
 
-      - name: Notification
-        run: echo "Slack notification: Production deployment successful"
+      - name: Run tests
+        run: pytest -v tests/
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
+
+      - name: Verify image
+        run: docker images
+
+      - name: Smoke test
+        run: |
+          docker run -d -p 5000:5000 --name test ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          sleep 10
+          curl -f http://localhost:5000 || true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t ${{ env.IMAGE_NAME }}:scan .
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: .
