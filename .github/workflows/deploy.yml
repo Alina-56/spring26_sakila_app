@@ -3,14 +3,6 @@ name: Deploy Pipeline
 on:
   push:
     branches: [main]
-    paths:
-      - app.py
-      - config.py
-      - templates/**
-      - static/**
-      - Dockerfile
-      - requirements.txt
-      - docker-compose.yml
 
 jobs:
   deploy-staging:
@@ -23,7 +15,6 @@ jobs:
       - name: Staging Deployment
         run: |
           echo "Deploying to STAGING"
-          echo "IMAGE=sakila-app:staging"
           docker build -t sakila-app:staging .
           echo "STAGING DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
 
@@ -41,18 +32,13 @@ jobs:
       - name: Production Deployment
         run: |
           echo "Deploying to PRODUCTION"
-          echo "IMAGE=sakila-app:production"
           docker build -t sakila-app:production .
 
       - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ github.run_number }}
-          release_name: Release v${{ github.run_number }}
-          draft: false
-          prerelease: false
+        run: |
+          DATE=$(date +%Y.%m.%d)
+          echo "Creating release v$DATE"
+          echo "RELEASE_TAG=v$DATE" >> $GITHUB_ENV
 
       - name: Production Summary
         run: |
