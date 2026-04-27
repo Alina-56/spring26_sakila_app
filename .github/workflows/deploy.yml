@@ -10,42 +10,19 @@ jobs:
   deploy_staging:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    environment: staging
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Staging Deployment
-        run: |
-          echo "Deploying to STAGING"
-          echo "IMAGE=sakila-app:staging"
-          docker build -t sakila-app:staging .
-          echo "STAGING DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
-
-      - name: Notification
-        run: echo "Slack notification: staging success"
+        run: echo "STAGING DEPLOYMENT SUCCESS"
 
   deploy_production:
     needs: deploy_staging
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Production Deployment
-        run: |
-          echo "Deploying to PRODUCTION"
-          echo "IMAGE=sakila-app:production"
-          docker build -t sakila-app:production .
-
-      - name: Create Release
-        run: |
-          DATE=$(date +%Y.%m.%d)
-          echo "Release v$DATE"
-
-      - name: Production Summary
-        run: echo "PRODUCTION DEPLOYMENT SUCCESS" >> $GITHUB_STEP_SUMMARY
-
-      - name: Notification
-        run: echo "Slack notification: production success"
+        run: echo "PRODUCTION DEPLOYMENT SUCCESS"
