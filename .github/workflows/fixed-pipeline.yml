@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  PYTHONPATH: .
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -15,15 +18,15 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: "3.9"
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest
+          pip install pytest pymysql flask
 
       - name: Run Tests
-        run: pytest tests/ -v
+        run: PYTHONPATH=. pytest tests/ -v
 
   build:
     runs-on: ubuntu-latest
@@ -32,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Image
+      - name: Build Docker Image
         run: docker build -t myapp .
 
   deploy:
