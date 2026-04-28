@@ -1,15 +1,17 @@
-name: Deploy Pipeline
+name: CD Pipeline
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+
+permissions:
+  contents: write
 
 jobs:
-
-  deploy_staging:
+  deploy-staging:
     runs-on: ubuntu-latest
-
     environment:
       name: staging
 
@@ -17,22 +19,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Print environment variables
-        run: env
-
-      - name: Simulate staging deployment
-        run: echo "STAGING DEPLOYMENT SUCCESS"
-
-      - name: Job Summary
+      - name: Print Environment Variables
         run: |
-          echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "Status: Success" >> $GITHUB_STEP_SUMMARY
+          echo "Printing environment variables..."
+          env
 
+      - name: Simulate Docker Run (Staging)
+        run: |
+          echo "Running Docker container with staging tag..."
+          docker run hello-world || true
 
-  deploy_production:
-    needs: deploy_staging
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "Environment: staging" >> $GITHUB_STEP_SUMMARY
+          echo "Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          echo "Docker Image: my-app:staging" >> $GITHUB_STEP_SUMMARY
+
+  deploy-production:
     runs-on: ubuntu-latest
-
+    needs: deploy-staging
     environment:
       name: production
 
@@ -40,12 +46,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Simulate production deployment
-        run: echo "PRODUCTION DEPLOYMENT SUCCESS"
+      - name: Simulate Production Deployment
+        run: |
+          echo "🚀 PRODUCTION DEPLOYMENT SUCCESS"
+          echo "Deploying application to production..."
 
-      - name: Create Release
+      - name: Generate Release Tag
+        id: tag
+        run: echo "TAG=v$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v$(date +'%Y.%m.%d')
+          tag_name: ${{ steps.tag.outputs.TAG }}
+          name: Release ${{ steps.tag.outputs.TAG }}
+          body: |
+            🚀 Production deployment successful!
+            Version: ${{ steps.tag.outputs.TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
